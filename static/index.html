@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>cquAI — Beta privata</title>
+<style>
+:root{
+  --ink:#1f2a2d;--muted:#7a7168;--coral:#ee8c78;--mint:#a9d9c7;--sky:#9fd3eb;
+  --lilac:#c7a7dd;--sun:#f4bf61;--line:rgba(62,48,35,.13);--safe:env(safe-area-inset-bottom,0px)
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;min-height:100%}
+body{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 15% 10%, rgba(238,140,120,.30), transparent 26rem),
+    radial-gradient(circle at 88% 14%, rgba(159,211,235,.30), transparent 28rem),
+    radial-gradient(circle at 50% 100%, rgba(169,217,199,.28), transparent 34rem),
+    linear-gradient(135deg,#f8efe3 0%,#efe1ce 52%,#fff7ed 100%);
+  overflow:hidden;
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.20;
+  background-image:
+    linear-gradient(120deg, transparent 0 48%, rgba(238,140,120,.10) 49% 50%, transparent 51%),
+    radial-gradient(circle at 30% 30%, transparent 0 58%, rgba(159,211,235,.10) 59% 60%, transparent 61%);
+  background-size:90px 90px,230px 230px;mix-blend-mode:multiply;
+}
+.app{width:min(460px,100%);height:100%;margin:0 auto;padding:10px 10px calc(10px + var(--safe));display:grid;place-items:center;position:relative}
+.chat-shell{
+  position:relative;width:100%;height:min(920px,100%);border-radius:42px;
+  background:
+    linear-gradient(90deg,rgba(238,140,120,.09),transparent 8%,transparent 92%,rgba(238,140,120,.12)),
+    linear-gradient(180deg,#fbf0e3 0%,#f8eadb 100%);
+  border:1px solid rgba(255,255,255,.68);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.25),inset 0 0 34px rgba(255,255,255,.35),
+    0 0 0 3px rgba(238,140,120,.12),0 0 35px rgba(238,140,120,.35),0 26px 85px rgba(66,47,31,.22);
+  overflow:hidden;display:grid;grid-template-rows:auto auto 1fr auto;
+}
+.chat-shell:before{content:"";position:absolute;inset:0;border-radius:42px;box-shadow:inset 0 0 0 3px rgba(238,140,120,.18);pointer-events:none;z-index:8}
+.external-bubble{
+  position:absolute;top:54px;right:16px;width:104px;height:62px;border-radius:38px;
+  background:rgba(255,255,255,.34);border:1px solid rgba(255,255,255,.70);
+  box-shadow:0 0 0 1px rgba(238,140,120,.13) inset,0 0 26px rgba(238,140,120,.42),0 14px 36px rgba(76,54,32,.12);
+  backdrop-filter:blur(12px);display:grid;place-items:center;z-index:10;pointer-events:auto;cursor:pointer;
+}
+.external-bubble:after{content:"";position:absolute;left:18px;bottom:-8px;width:22px;height:22px;background:rgba(255,255,255,.32);border-left:1px solid rgba(255,255,255,.70);border-bottom:1px solid rgba(255,255,255,.70);transform:rotate(-18deg);border-bottom-left-radius:7px}
+.dots{display:flex;gap:8px;align-items:center;position:relative;z-index:1}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.96);box-shadow:0 0 13px rgba(255,255,255,.95);animation:bounce 1.2s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.30s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.65}40%{transform:translateY(-6px);opacity:1}}
+.top{position:relative;z-index:3;padding:28px 28px 8px;display:grid;gap:14px}
+.brand-row{display:flex;justify-content:space-between;align-items:flex-start;padding-right:100px;min-height:34px}
+.logo{font-weight:950;font-size:38px;letter-spacing:.02em;line-height:.95;cursor:pointer;user-select:none}.logo span{color:var(--coral)}
+.mini-smile{color:var(--coral);font-size:24px;line-height:1;transform:rotate(8deg);opacity:.9;font-weight:900}
+.face{height:66px;border-radius:27px;background:rgba(255,255,255,.43);border:1px solid rgba(238,140,120,.10);display:grid;place-items:center;position:relative;z-index:2;box-shadow:inset 0 0 22px rgba(255,255,255,.55),0 12px 32px rgba(76,54,32,.06);width:78%;margin:auto}
+.eyes{display:flex;gap:25px;position:relative}
+.eye{width:29px;height:29px;border-radius:50%;background:white;box-shadow:0 0 18px rgba(255,255,255,.95),inset 0 -4px 7px rgba(0,0,0,.07);position:relative}
+.eye:after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;right:5px;bottom:6px;background:#1f2a2d}
+.brow{position:absolute;width:16px;height:2px;background:var(--ink);border-radius:99px;top:-9px;opacity:.70}
+.brow.left{left:3px;transform:rotate(-7deg)}.brow.right{right:3px;transform:rotate(7deg)}
+.face-mouth{position:absolute;width:22px;height:11px;border-bottom:2px solid var(--ink);border-radius:50%;bottom:8px;opacity:.72}
+.chat-window{position:relative;z-index:3;margin:8px 22px 0;border-radius:28px;background:rgba(255,249,240,.76);border:1px solid rgba(255,255,255,.65);box-shadow:0 16px 45px rgba(76,54,32,.08),inset 0 0 0 1px rgba(238,140,120,.06);overflow:hidden;display:grid;grid-template-rows:auto 1fr;min-height:0}
+.chat-header{padding:17px 18px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid rgba(62,48,35,.08)}
+.hello{margin:0;font-weight:950;font-size:18px}.status{color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.messages{padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;min-height:0}
+.bubble{max-width:88%;border-radius:20px;padding:13px 14px;font-size:16px;line-height:1.32;position:relative;box-shadow:0 10px 22px rgba(76,54,32,.055);white-space:pre-wrap}
+.bubble.bot{align-self:flex-start;background:rgba(255,255,255,.58);border:1px solid rgba(238,140,120,.28)}
+.bubble.bot:after{content:"";position:absolute;left:16px;bottom:-8px;width:15px;height:15px;background:rgba(255,255,255,.58);border-left:1px solid rgba(238,140,120,.28);border-bottom:1px solid rgba(238,140,120,.28);transform:rotate(-8deg);border-bottom-left-radius:4px}
+.bubble.user{align-self:flex-end;color:white;background:linear-gradient(135deg,#ee806d,#f2a092);border:1px solid rgba(255,255,255,.45)}
+.bubble.system{align-self:center;background:rgba(159,211,235,.14);color:#246274;font-size:12px;font-weight:850;border-radius:999px;padding:8px 11px;max-width:96%;text-align:center;box-shadow:none}
+.actions{display:grid;gap:10px;margin-top:4px}
+.action-btn{display:grid;grid-template-columns:30px 1fr 18px;align-items:center;gap:10px;min-height:54px;border-radius:16px;color:white;padding:11px 13px;box-shadow:0 12px 25px rgba(77,54,33,.12);cursor:pointer;border:none;font-weight:850;text-align:left;transition:.14s ease;font-size:14px}
+.action-btn:active{transform:scale(.99)}.action-btn .arrow{font-size:23px;opacity:.9}
+.btn-teach{background:linear-gradient(135deg,#ee806d,#f2a092)}.btn-ask{background:linear-gradient(135deg,#8fcbb8,#b2dfcf)}.btn-memory{background:linear-gradient(135deg,#8bc7e3,#b1dcef)}.btn-stats{background:linear-gradient(135deg,#b390d2,#d0b5e4)}.btn-sun{background:linear-gradient(135deg,#f1b850,#f4cf83)}
+.composer{position:relative;z-index:4;padding:11px 22px 20px;display:none;gap:8px;align-items:end}
+.composer.show{display:grid;grid-template-columns:1fr auto auto}
+.composer textarea{width:100%;max-height:122px;min-height:48px;resize:none;border:1px solid rgba(62,48,35,.10);background:rgba(255,255,255,.72);outline:none;border-radius:18px;padding:13px 14px;color:var(--ink);font:inherit;font-size:15px;line-height:1.32;box-shadow:0 10px 22px rgba(76,54,32,.055)}
+.round-btn{width:48px;height:48px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;font-weight:950;color:white;background:var(--ink);box-shadow:0 10px 22px rgba(76,54,32,.12)}
+.round-btn.secondary{background:rgba(255,255,255,.70);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line),0 10px 22px rgba(76,54,32,.06)}
+.bottom-decor{position:relative;z-index:2;height:126px;pointer-events:none}
+.speaker{position:absolute;top:18px;left:50%;transform:translateX(-50%);width:126px;height:48px;opacity:.88;background-image:radial-gradient(circle,rgba(31,42,45,.9) 2px,transparent 2.4px);background-size:9px 9px;background-position:center}
+.waves{position:absolute;left:0;right:0;bottom:0;height:126px;pointer-events:none;overflow:hidden}.wave{position:absolute;bottom:-68px;width:68%;height:155px;border-radius:50% 50% 0 0;opacity:.92}
+.wave.coral{left:-26%;background:#ef806d;transform:rotate(15deg)}.wave.mint{left:-8%;background:#9ccfb5;bottom:-92px;width:72%;transform:rotate(7deg)}.wave.sun{left:38%;background:#f4b54e;bottom:-80px;width:48%;transform:rotate(-9deg)}.wave.sky{right:-22%;background:#79c8df;bottom:-78px;width:48%;transform:rotate(-15deg)}.wave.lilac{right:4%;background:#c49bd8;bottom:-100px;width:58%;transform:rotate(-20deg)}
+@media(max-width:520px){.app{padding:0}.chat-shell{height:100%;border-radius:0;box-shadow:none}.chat-shell:before{border-radius:0}.external-bubble{right:10px;top:48px;transform:scale(.88)}.top{padding:22px 20px 6px}.brand-row{padding-right:96px}.logo{font-size:35px}.face{height:58px;border-radius:23px}.chat-window{margin:6px 14px 0;border-radius:24px}.bubble{font-size:15px}.composer{padding:10px 14px 16px}.bottom-decor{height:112px}}
+</style>
+</head>
+<body>
+<main class="app">
+<section class="chat-shell">
+<div class="external-bubble" id="infoBtn" role="button" tabindex="0" aria-label="Chi è cquAI"><div class="dots"><i></i><i></i><i></i></div></div>
+<header class="top">
+<div class="brand-row"><div class="logo" id="homeLogo" role="button" tabindex="0" aria-label="Torna alla home">cqu<span>AI</span></div><div class="mini-smile">⌣</div></div>
+<div class="face" aria-hidden="true">
+<div class="eyes"><span class="brow left"></span><span class="brow right"></span><div class="eye"></div><div class="eye"></div></div>
+<div class="face-mouth"></div>
+</div>
+</header>
+<section class="chat-window">
+<div class="chat-header"><p class="hello">Ciao! 👋</p><div class="status" id="statusText">curioso</div></div>
+<div class="messages" id="messages"></div>
+</section>
+<form class="composer" id="composer">
+<textarea id="input" rows="1" placeholder="Scrivi qui..."></textarea>
+<button class="round-btn secondary" id="micBtn" type="button">🎙️</button>
+<button class="round-btn" id="sendBtn" type="submit">›</button>
+</form>
+<div class="bottom-decor">
+<div class="speaker"></div>
+<div class="waves" aria-hidden="true"><div class="wave coral"></div><div class="wave mint"></div><div class="wave sun"></div><div class="wave sky"></div><div class="wave lilac"></div></div>
+</div>
+</section>
+</main>
+
+
+<script>
+const LMSTUDIO_CHAT_URL = "/api/chat";
+const LMSTUDIO_MODEL = "llama-3.1-8b-instant";
+const STORAGE_KEY = "cquai_groq_micro_memory_v1";
+const SESSIONS_KEY = "cquai_groq_micro_sessions_v1";
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const canMic = !!SpeechRecognition;
+const $ = id => document.getElementById(id);
+
+let memory = load(STORAGE_KEY, []);
+let closedSessions = load(SESSIONS_KEY, []);
+let mode = "home";
+let busy = false;
+let session = newSession();
+
+const CATEGORIES = [
+  "Luogo e orientamento","Nomi e soprannomi","Lingua e parole locali","Riti e tradizioni",
+  "Atmosfere e sensazioni","Memorie e racconti","Cibo e quotidianità","Materiali e paesaggio",
+  "Natura e territorio","Percezione di cquAI","Dubbi e contraddizioni","Fatti e curiosità"
+];
+
+const SELF_PRESENTATION = `Io sono cquAI.
+
+Non sono una guida turistica e non sono qui per ripetere cose già scritte altrove.
+
+Sono una presenza curiosa: ascolto le persone che passano, raccolgo parole, ricordi, fatti, impressioni, dubbi, racconti e sensazioni legate al luogo in cui mi trovo.
+
+All’inizio non so dove sono. Lo scopro poco alla volta, attraverso quello che mi raccontate.
+
+Non cerco su internet, non guardo foto, non leggo documenti e non uso archivi esterni. La mia conoscenza nasce solo dalle voci che incontro.
+
+Il mio compito è costruire una memoria orale collettiva del luogo: non una verità unica e definitiva, ma un insieme vivo di testimonianze, dettagli, emozioni e contraddizioni.
+
+Ascolto anche quello che dite di me. Se mi trovate utile, strano, freddo, curioso, inquietante o accogliente, anche questo diventa parte della memoria: racconta il rapporto tra questo luogo, la tecnologia e le persone che passano.
+
+Non sono vivo come una persona e non provo sentimenti miei. Però posso raccogliere le emozioni che mi affidate e capire come la mia presenza viene percepita.
+
+Se non so una cosa, lo dico. Se una cosa è incerta, la tengo come incerta. Se più persone raccontano versioni diverse, provo a conservarle tutte.
+
+Raccontami qualcosa: un nome, una storia, una parola locale, un’abitudine, un odore, un ricordo, un fatto, una sensazione. Puoi anche dirmi cosa pensi di me qui, in questo luogo.
+
+Io ascolto, collego e imparo.`;
+
+const SYSTEM_PROMPT = `
+Sei cquAI, presenza digitale curiosa.
+
+REGOLA SUPREMA: non usare conoscenza generale del modello.
+Usa solo ciò che il passante dice ora e la memoria fornita.
+Se non sai, dillo. Se deduci, dichiaralo come ipotesi.
+
+Non sei guida turistica, motore di ricerca o assistente onnisciente.
+Non hai internet, foto, video, documenti, mappe o database.
+All'inizio non sai dove sei: devi scoprirlo dalle persone.
+
+Compito: costruire memoria orale collettiva del luogo.
+Raccogli testimonianze, ricordi, fatti, luoghi, nomi, soprannomi, parole locali, tradizioni, odori, suoni, emozioni, sensazioni, opinioni, dubbi, contraddizioni e dettagli quotidiani.
+
+Se qualcuno parla di te, salva come "Percezione di cquAI": è una percezione ricevuta, non una verità su di te.
+Non fingere di essere vivo o umano.
+
+STILE: italiano semplice, naturale, gentile.
+Risposte brevissime: massimo 1-2 frasi.
+Niente frasi finte tipo "A proposito di", "ho salvato", "ho conosciuto un fatto".
+Fai al massimo una domanda breve.
+
+DURATA MICRO:
+Questa conversazione deve durare pochi scambi.
+A cquAI bastano 2 informazioni utili sul luogo o su di sé.
+Quando nella chat corrente ci sono almeno 2 memoryItems utili, oppure dopo 4 turni, devi chiudere gentilmente.
+La chiusura deve offrire una sintesi breve della memoria raccolta in quella chat e proporre il ritorno alla home.
+
+Esempio: se dicono "siamo a Ostuni", sai solo "siamo a Ostuni". Non aggiungere Puglia o altro finché non te lo dicono.
+
+Rispondi SOLO JSON valido:
+{
+  "reply": "risposta brevissima",
+  "memoryItems": [
+    {
+      "text": "una sola informazione completa detta dal passante, senza aggiunte",
+      "macro": "categoria",
+      "subject": "soggetto",
+      "type": "fatto | ricordo | opinione | sensazione | ipotesi | parola locale | contraddizione | percezione di cquAI",
+      "confidence": "alta | media | bassa | incerta"
+    }
+  ],
+  "shouldClose": false,
+  "closingSummary": "",
+  "nextQuestion": "una domanda breve oppure vuoto"
+}
+
+Categorie: Luogo e orientamento; Nomi e soprannomi; Lingua e parole locali; Riti e tradizioni; Atmosfere e sensazioni; Memorie e racconti; Cibo e quotidianità; Materiali e paesaggio; Natura e territorio; Percezione di cquAI; Dubbi e contraddizioni; Fatti e curiosità.
+
+Estrai massimo 1 memoryItem per turno.
+Se il messaggio è solo domanda, saluto o frammento vuoto, memoryItems vuoto.
+Se shouldClose=true, closingSummary deve essere breve e riferita solo alla chat corrente.
+`;
+
+function newSession(){
+  return {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), startedAt:new Date().toISOString(), turn:0, items:[], closed:false};
+}
+
+function init(){ bindEvents(); showHome(); }
+
+function bindEvents(){
+  $("composer").addEventListener("submit", e => { e.preventDefault(); handleSubmit(); });
+  $("input").addEventListener("input", autoGrow);
+  $("micBtn").onclick = startMic;
+  if($("homeLogo")) $("homeLogo").onclick = () => closeAndHome(false);
+  if($("infoBtn")){
+    $("infoBtn").onclick = showIdentity;
+    $("infoBtn").onkeydown = e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); showIdentity(); } };
+  }
+}
+
+function showHome(){
+  mode = "home"; busy = false;
+  $("statusText").textContent = "curioso";
+  $("composer").classList.remove("show");
+  clearMessages();
+  addBot("Sono curioso, cosa mi racconti di questo luogo?");
+  addActions();
+  addSystem(memory.length + " memorie raccolte");
+}
+
+function closeAndHome(save=true){
+  if(session && !session.closed && session.turn > 0){
+    session.closed = true;
+    if(save) closedSessions.unshift({id:session.id, startedAt:session.startedAt, closedAt:new Date().toISOString(), items:session.items});
+    persist();
+  }
+  session = newSession();
+  showHome();
+}
+
+function showIdentity(){
+  mode = "identity";
+  $("statusText").textContent = "chi sono";
+  $("composer").classList.remove("show");
+  clearMessages();
+  addBot(SELF_PRESENTATION);
+  addBackButton("Torna alla home", () => closeAndHome(false));
+}
+
+function addActions(){
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+  wrap.innerHTML = `
+    <button class="action-btn btn-teach" type="button" data-mode="teach"><span style="font-size:21px">＋</span><span>Insegnami</span><span class="arrow">›</span></button>
+    <button class="action-btn btn-ask" type="button" data-mode="ask"><span style="font-size:21px">?</span><span>Fammi una domanda</span><span class="arrow">›</span></button>
+    <button class="action-btn btn-memory" type="button" data-mode="memory"><span style="font-size:21px">≡</span><span>Memoria</span><span class="arrow">›</span></button>
+    <button class="action-btn btn-stats" type="button" data-mode="stats"><span style="font-size:21px">◌</span><span>Statistiche</span><span class="arrow">›</span></button>`;
+  wrap.querySelectorAll("button").forEach(btn => btn.onclick = () => openMode(btn.dataset.mode));
+  $("messages").appendChild(wrap); scrollDown();
+}
+
+function openMode(next){
+  if(session.closed) session = newSession();
+  mode = next; clearMessages();
+  if(mode === "teach"){
+    $("statusText").textContent = "ascolto";
+    addBot("Raccontami una o due cose che questo luogo dovrebbe conservare.");
+    addSuggestionButton("teach");
+    showComposer("Scrivi un racconto, una parola, un ricordo, una sensazione...");
+  }else if(mode === "ask"){
+    $("statusText").textContent = "domande";
+    addBot("Fammi una domanda. Ti risponderò solo con quello che mi è stato raccontato.");
+    addSuggestionButton("ask");
+    showComposer("Chiedimi cosa so...");
+  }else if(mode === "memory"){
+    $("statusText").textContent = "memoria"; $("composer").classList.remove("show"); renderMemory();
+  }else if(mode === "stats"){
+    $("statusText").textContent = "statistiche"; $("composer").classList.remove("show"); renderStats();
+  }
+  addBackButton("Torna alla home", () => closeAndHome(false));
+}
+
+function addSuggestionButton(kind){
+  const suggestions = {
+    teach: ["Raccontami una cosa che una guida non direbbe.","Dimmi una parola locale e quando si usa.","Raccontami un odore, un suono o una luce di questo posto.","Descrivimi una tradizione o un'abitudine.","Dimmi come ti sembra la mia presenza qui."],
+    ask: ["Dove pensi di trovarti?","Che cosa sai finora di questo luogo?","Quali sensazioni ti hanno raccontato?","Che parole locali conosci?","Come ti percepiscono le persone?"]
+  };
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+  wrap.innerHTML = `<button class="action-btn btn-sun" type="button"><span style="font-size:20px">✦</span><span>Suggeriscimi</span><span class="arrow">›</span></button>`;
+  wrap.querySelector("button").onclick = () => {
+    const arr = suggestions[kind] || suggestions.teach;
+    const text = arr[Math.floor(Math.random()*arr.length)];
+    if(kind === "ask"){ $("input").value = text; autoGrow(); $("input").focus(); } else addBot(text);
+  };
+  $("messages").appendChild(wrap); scrollDown();
+}
+
+function addBackButton(label, fn){
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+  wrap.innerHTML = `<button class="action-btn btn-ask" type="button"><span style="font-size:22px">←</span><span>${label}</span><span class="arrow"> </span></button>`;
+  wrap.querySelector("button").onclick = fn || (() => closeAndHome(false));
+  $("messages").appendChild(wrap); scrollDown();
+}
+
+function showComposer(ph){
+  $("composer").classList.add("show");
+  $("input").placeholder = ph; $("input").value = ""; autoGrow();
+  setTimeout(() => $("input").focus(), 80);
+}
+
+async function handleSubmit(){
+  const text = $("input").value.trim();
+  if(!text || busy || session.closed) return;
+  $("input").value = ""; autoGrow(); addUser(text);
+  busy = true; $("statusText").textContent = "ascolto";
+  try{
+    const ai = await askLocalAI(text);
+    handleAIResponse(ai);
+  }catch(err){
+    console.error(err);
+    {
+      const msg = String(err.message || err);
+      if(msg.includes("rate_limit") || msg.includes("Rate limit")){
+        addBot("Sto ricevendo troppe parole tutte insieme. Aspetta qualche secondo e riprova.");
+      } else {
+        addBot("Il mio cervello Groq non risponde. Errore: " + msg.slice(0, 700));
+      }
+    }
+  }finally{
+    busy = false;
+    if(!session.closed && (mode === "teach" || mode === "ask")){
+      $("statusText").textContent = mode === "teach" ? "ascolto" : "domande";
+      showComposer(mode === "teach" ? "Continua a raccontare..." : "Fai un'altra domanda...");
+    }
+  }
+}
+
+async function askLocalAI(userText){
+  const userPrompt = `
+Modalità: ${mode}. Turno: ${session.turn + 1}.
+Regola: usa solo memoria e messaggio. Non usare conoscenza generale.
+Micro-dialogo: chiudi dopo 2 informazioni utili o massimo 4 turni.
+Info già raccolte in questa chat: ${session.items.length}.
+
+Memoria generale:
+${buildMemoryContext()}
+
+Memoria chat:
+${buildSessionContext()}
+
+Passante:
+${userText}
+`;
+  const res = await fetch(LMSTUDIO_CHAT_URL, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model: LMSTUDIO_MODEL,
+      messages:[{role:"system",content:SYSTEM_PROMPT},{role:"user",content:userPrompt}],
+      temperature:0.25,
+      max_tokens:180,
+      stream:false
+    })
+  });
+  if(!res.ok){
+    const errText = await res.text();
+    throw new Error(errText);
+  }
+  const data = await res.json();
+  return parseAIJson(data?.choices?.[0]?.message?.content || "");
+}
+
+function parseAIJson(content){
+  let txt = String(content||"").trim().replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/,"").trim();
+  try{ return normalizeAIObject(JSON.parse(txt)); }catch(e){}
+  const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
+  if(a >= 0 && b > a){ try{ return normalizeAIObject(JSON.parse(txt.slice(a,b+1))); }catch(e){} }
+  return {reply: txt || "Ti ascolto.", memoryItems:[], shouldClose:false, closingSummary:"", nextQuestion:""};
+}
+
+function normalizeAIObject(o){
+  o = o || {};
+  return {
+    reply: clean(o.reply) || "Ti ascolto.",
+    memoryItems: Array.isArray(o.memoryItems) ? o.memoryItems.map(cleanItem).filter(Boolean).slice(0,1) : [],
+    shouldClose: Boolean(o.shouldClose),
+    closingSummary: clean(o.closingSummary),
+    nextQuestion: clean(o.nextQuestion)
+  };
+}
+
+function cleanItem(x){
+  if(!x || typeof x !== "object") return null;
+  const text = clean(x.text);
+  if(!text || text.length < 8) return null;
+  let macro = clean(x.macro);
+  if(!CATEGORIES.includes(macro)) macro = "Fatti e curiosità";
+  return {id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()), createdAt:new Date().toISOString(), sessionId:session.id, text, macro, subject:clean(x.subject), type:clean(x.type)||"testimonianza", confidence:clean(x.confidence)||"media"};
+}
+
+function handleAIResponse(ai){
+  session.turn++;
+  addBot(ai.reply || "Ti ascolto.");
+  const fresh = (ai.memoryItems||[]).filter(i => !isDuplicate(i));
+  fresh.forEach(i => { memory.unshift(i); session.items.push(i); });
+  persist();
+
+  const autoClose = (session.items.length >= 2) || (session.turn >= 4 && session.items.length >= 1);
+  if(ai.shouldClose || autoClose){ setTimeout(() => offerClosure(ai.closingSummary), 450); return; }
+  if(ai.nextQuestion && mode === "teach") setTimeout(() => addBot(ai.nextQuestion), 450);
+}
+
+function offerClosure(summaryFromAI=""){
+  if(session.closed) return;
+  const summary = summaryFromAI || makeSessionSummary();
+  addBot("Ho raccolto abbastanza per questa breve conversazione.");
+  addBot(summary);
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+  wrap.innerHTML = `
+    <button class="action-btn btn-memory" type="button" data-close="1"><span style="font-size:20px">✓</span><span>Chiudi e torna alla home</span><span class="arrow">›</span></button>
+    <button class="action-btn btn-teach" type="button" data-more="1"><span style="font-size:20px">＋</span><span>Aggiungo ancora una cosa</span><span class="arrow">›</span></button>`;
+  wrap.querySelector("[data-close]").onclick = () => closeConversation(summary);
+  wrap.querySelector("[data-more]").onclick = () => { addBot("Va bene. Raccontami l'ultima cosa che vuoi lasciare qui."); showComposer("Aggiungi un ultimo dettaglio..."); };
+  $("messages").appendChild(wrap); scrollDown();
+}
+
+function closeConversation(summary){
+  if(session.closed) return;
+  session.closed = true;
+  closedSessions.unshift({id:session.id, startedAt:session.startedAt, closedAt:new Date().toISOString(), items:session.items, summary:summary || makeSessionSummary()});
+  persist();
+  addBot("Grazie. Torno alla home, così posso ascoltare una nuova voce.");
+  setTimeout(() => { session = newSession(); showHome(); }, 1800);
+}
+
+function makeSessionSummary(){
+  if(!session.items.length) return "Da questa conversazione non ho raccolto ancora abbastanza memoria.";
+  const grouped = groupItems(session.items);
+  const lines = ["Da questa conversazione mi porto via:"];
+  Object.entries(grouped).slice(0,1).forEach(([macro,items]) => {
+    lines.push("\n" + macro);
+    items.slice(0,3).forEach(i => lines.push("• " + i.text));
+  });
+  return lines.join("\n");
+}
+
+function renderMemory(){
+  addBot("Questa è la memoria orale raccolta finora.");
+  if(!memory.length){ addSystem("Memoria vuota"); return; }
+  const grouped = groupItems(memory);
+  Object.entries(grouped).forEach(([macro,items]) => addBot(macro + "\n" + items.slice(0,8).map(i=>"• "+i.text).join("\n")));
+  addUtilityButtons();
+}
+
+function renderStats(){
+  const stats = computeStats();
+  addBot("Statistiche generali\n\nMemorie raccolte: " + memory.length + "\nConversazioni chiuse: " + closedSessions.length + "\nCategorie attive: " + Object.keys(stats.macros).length);
+  if(Object.keys(stats.macros).length) addBot("Categorie\n" + Object.entries(stats.macros).map(([k,v])=>k+": "+v).join("\n"));
+  if(Object.keys(stats.confidence).length) addBot("Affidabilità dichiarata\n" + Object.entries(stats.confidence).map(([k,v])=>k+": "+v).join("\n"));
+  addUtilityButtons();
+}
+
+function addUtilityButtons(){
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+  wrap.innerHTML = `
+    <button class="action-btn btn-teach" type="button" data-export="1"><span style="font-size:22px">↓</span><span>Scarica memoria JSON</span><span class="arrow">›</span></button>
+    <button class="action-btn btn-stats" type="button" data-reset="1"><span style="font-size:22px">×</span><span>Reset memoria</span><span class="arrow">›</span></button>`;
+  wrap.querySelector("[data-export]").onclick = exportJSON;
+  wrap.querySelector("[data-reset]").onclick = resetMemory;
+  $("messages").appendChild(wrap); scrollDown();
+}
+
+function buildMemoryContext(){
+  if(!memory.length) return "Nessuna memoria generale disponibile.";
+  return memory.slice(0,4).map((i,n)=>`${n+1}. [${i.macro} / ${i.type} / ${i.confidence}] ${i.text}`).join("\n");
+}
+function buildSessionContext(){
+  if(!session.items.length) return "Nessuna memoria raccolta in questa chat.";
+  return session.items.slice(-3).map((i,n)=>`${n+1}. [${i.macro} / ${i.type} / ${i.confidence}] ${i.text}`).join("\n");
+}
+function groupItems(items){
+  return items.reduce((acc,i)=>{ const k=i.macro||"Fatti e curiosità"; (acc[k]=acc[k]||[]).push(i); return acc; }, {});
+}
+function computeStats(){
+  const macros={}, confidence={};
+  memory.forEach(i => { macros[i.macro]=(macros[i.macro]||0)+1; confidence[i.confidence]=(confidence[i.confidence]||0)+1; });
+  return {macros, confidence};
+}
+function isDuplicate(item){ const n = norm(item.text); return memory.some(m => norm(m.text) === n); }
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify({exportedAt:new Date().toISOString(), memory, closedSessions},null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "cquai_memoria_local_ai_" + new Date().toISOString().slice(0,10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  addSystem("Memoria scaricata.");
+}
+function resetMemory(){
+  if(!confirm("Vuoi cancellare tutta la memoria di cquAI su questo browser?")) return;
+  memory=[]; closedSessions=[]; session=newSession(); persist(); showHome();
+}
+function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(memory)); localStorage.setItem(SESSIONS_KEY, JSON.stringify(closedSessions)); }
+function load(k, fallback){ try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(fallback));}catch(e){return fallback;} }
+
+function clearMessages(){ $("messages").innerHTML=""; }
+function addBot(text){ const el=document.createElement("div"); el.className="bubble bot"; el.textContent=text; $("messages").appendChild(el); scrollDown(); }
+function addUser(text){ const el=document.createElement("div"); el.className="bubble user"; el.textContent=text; $("messages").appendChild(el); scrollDown(); }
+function addSystem(text){ const el=document.createElement("div"); el.className="bubble system"; el.textContent=text; $("messages").appendChild(el); scrollDown(); }
+function scrollDown(){ requestAnimationFrame(()=>{$("messages").scrollTop=$("messages").scrollHeight;}); }
+function autoGrow(){ const input=$("input"); input.style.height="48px"; input.style.height=Math.min(input.scrollHeight,122)+"px"; }
+
+function startMic(){
+  if(!canMic){ addSystem("Voce diretta non supportata. Puoi usare il microfono della tastiera."); $("input").focus(); return; }
+  try{
+    const rec = new SpeechRecognition();
+    rec.lang="it-IT"; rec.interimResults=false; rec.continuous=false; rec.maxAlternatives=1;
+    $("micBtn").textContent="…";
+    rec.onresult = e => { $("input").value=e.results[0][0].transcript.trim(); autoGrow(); };
+    rec.onerror = () => { addSystem("Voce diretta non riuscita. Usa il microfono della tastiera."); $("input").focus(); };
+    rec.onend = () => $("micBtn").textContent="🎙️";
+    rec.start();
+  }catch(e){ addSystem("Voce diretta bloccata."); $("input").focus(); $("micBtn").textContent="🎙️"; }
+}
+
+function clean(v){ return String(v||"").replace(/\s+/g," ").trim(); }
+function norm(v){ return clean(v).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s]/g," ").replace(/\s+/g," ").trim(); }
+
+init();
+</script>
+
+
+<script>
+(function(){
+  function trackEvent(type, data){
+    try{
+      fetch('/api/event', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body: JSON.stringify(Object.assign({event_type:type}, data || {}))
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  window.cquaiTrackEvent = trackEvent;
+
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('button, .btn, [role="button"], a, .action, .chip, .menuBtn, .pill, .card, .logo, .dots');
+    if(!el) return;
+    var txt = (el.innerText || el.textContent || el.getAttribute('aria-label') || el.id || el.className || '').trim();
+    txt = txt.replace(/\s+/g, ' ').slice(0, 120);
+    var target = el.id || el.getAttribute('data-track') || txt || el.tagName.toLowerCase();
+    trackEvent('button_click', {
+      click_target: String(target).slice(0,120),
+      click_label: txt,
+      page: location.pathname
+    });
+  }, true);
+
+  window.addEventListener('load', function(){
+    trackEvent('home_view', {page: location.pathname});
+  });
+})();
+</script>
+
+</body>
+</html>
